@@ -12,6 +12,8 @@ OCR numérico local, revisão humana, validação de cobertura e exportação au
 O projeto foi criado para demonstrar competências em **Python, automação e dados** de forma
 rápida de testar: não exige cadastro, chave de API ou serviço pago.
 
+**[Abrir demonstração ao vivo](https://2unfc5x3e6wjtq5uvwmafz.streamlit.app/)**
+
 ![FormFlow em revisão](docs/assets/formflow-demo.png)
 
 ## O que a demonstração comprova
@@ -26,6 +28,8 @@ rápida de testar: não exige cadastro, chave de API ou serviço pago.
 - testes automatizados, análise estática e CI em Python 3.11 e 3.12.
 
 ## Experimente em três minutos
+
+Abra a [aplicação publicada no Streamlit](https://2unfc5x3e6wjtq5uvwmafz.streamlit.app/) e:
 
 1. Escolha `Limpo`, `Ruído` ou `Revisão`.
 2. Clique em **Processar documento**. O Tesseract executa de verdade no servidor.
