@@ -116,6 +116,8 @@ class EditEvent:
     new_value: FieldValue
     at: datetime
     action: str
+    initial_source: FieldSource
+    final_source: FieldSource
 
 
 def _validate_confidence(confidence: float) -> None:
