@@ -77,12 +77,13 @@ def _render_select(controller: SessionController) -> None:
 
 
 def _render_review(controller: SessionController) -> None:
-    render_progress(AppPhase.REVIEW.value)
     session = controller.review
     image = controller.image
     if session is None or image is None:
         controller.reset()
         st.rerun()
+    report = session.validation_report()
+    render_progress("validate" if report.is_valid else AppPhase.REVIEW.value)
     st.markdown("## Revise antes de concluir")
     st.write("A leitura automática ajuda; a conclusão depende de cobertura e revisão explícitas.")
     render_full_form_review(session, image)

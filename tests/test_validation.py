@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from types import MappingProxyType
 
 import pytest
 
-from formflow.domain import FieldKey, FieldName
+from formflow.domain import FieldKey, FieldName, FieldSource
 from formflow.review import ReviewSession
-from formflow.validation import UnresolvedDocumentError
+from formflow.validation import UnresolvedDocumentError, ValidatedDocument, ValidatedField
 from tests.test_review import make_result
 
 NOW = datetime(2026, 10, 30, 12, 0, tzinfo=UTC)
@@ -72,3 +73,25 @@ def test_unknown_field_is_reported_and_blocks_finalization() -> None:
 
     assert report.unknown == 1
     assert not report.is_valid
+
+
+def test_validated_document_rejects_incomplete_direct_construction() -> None:
+    field = ValidatedField(
+        key=FieldKey("P01", FieldName.QUANTITY),
+        raw_text="2",
+        value=2,
+        confidence=0.99,
+        initial_source=FieldSource.AUTO,
+        final_source=FieldSource.AUTO,
+        human_interacted=False,
+    )
+
+    with pytest.raises(ValueError, match="exactly 16"):
+        ValidatedDocument(
+            document_id="invalid",
+            image_sha256="a" * 64,
+            fields=(field,),
+            events=(),
+            timings_ms=MappingProxyType({"total": 1.0}),
+            finalized_at=NOW,
+        )

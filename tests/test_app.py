@@ -3,25 +3,24 @@ from __future__ import annotations
 import os
 import subprocess
 import sys
-from datetime import UTC, datetime
 from pathlib import Path
 
 from streamlit.testing.v1 import AppTest
 
-from formflow.domain import FieldName, FieldStatus, OcrReading
+from formflow.domain import FieldName, OcrReading
 
 ROOT = Path(__file__).parents[1]
 
 
 class DeterministicEngine:
-    def __init__(self, pending_first: bool = False) -> None:
-        self.pending_first = pending_first
+    def __init__(self, pending_count: int = 0) -> None:
+        self.pending_count = pending_count
         self.calls = 0
 
     def read(self, crop, field_name: FieldName) -> OcrReading:
         del crop
         self.calls += 1
-        if self.pending_first and self.calls == 1:
+        if self.calls <= self.pending_count:
             return OcrReading("?", 0.05)
         text = "2" if field_name is FieldName.QUANTITY else "12,34"
         return OcrReading(text, 0.99)
@@ -65,17 +64,18 @@ def test_clean_sample_shows_full_form_sixteen_rows_and_result_downloads() -> Non
 
 
 def test_pending_field_blocks_then_accepts_human_edit() -> None:
-    at = _processed_app(DeterministicEngine(pending_first=True))
+    at = _processed_app(DeterministicEngine(pending_count=2))
 
     finalize = _button(at, "Concluir revisão")
     assert finalize.disabled
-    session = at.session_state["formflow.review"]
-    pending_key = next(
-        key for key, field in session.fields.items() if field.status is FieldStatus.PENDING
-    )
-    session.apply_edit(pending_key, "2", datetime.now(UTC))
 
+    _button(at, "Confirmar vazio · Café Horizonte · Quantidade").click()
     at = at.run(timeout=30)
+    assert _button(at, "Concluir revisão").disabled
+
+    _button(at, "Confirmar vazio · Café Horizonte · Preço unitário").click()
+    at = at.run(timeout=30)
+
     assert not _button(at, "Concluir revisão").disabled
 
 

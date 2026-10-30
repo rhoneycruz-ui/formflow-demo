@@ -83,6 +83,24 @@ def test_validate_upload_applies_exif_orientation() -> None:
     assert pixels[:20, :, 1].mean() < pixels[20:, :, 1].mean()
 
 
+def test_validate_upload_rejects_declared_pixel_limit_before_exif_decode(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    transpose_called = False
+
+    def fail_if_called(image):
+        nonlocal transpose_called
+        transpose_called = True
+        raise AssertionError("oversized image must be rejected before pixel decode")
+
+    monkeypatch.setattr("formflow.image_pipeline.ImageOps.exif_transpose", fail_if_called)
+
+    with pytest.raises(InvalidUploadError, match="20 megapixels"):
+        validate_upload(_png_with_dimensions(5000, 4001), "oversized.png")
+
+    assert not transpose_called
+
+
 @pytest.mark.parametrize("kind", [SampleKind.CLEAN, SampleKind.NOISY])
 def test_register_form_and_extract_all_fields(kind: SampleKind) -> None:
     sample = render_sample(kind, seed=2026)
@@ -102,6 +120,31 @@ def test_register_form_handles_small_rotation() -> None:
     registered = register_form(rotated)
 
     assert registered.image.size == FORM_SIZE
+
+
+def test_register_form_handles_two_times_resolution() -> None:
+    original = render_sample(SampleKind.CLEAN, seed=2026).image
+    scaled = original.resize((FORM_SIZE[0] * 2, FORM_SIZE[1] * 2), Image.Resampling.LANCZOS)
+
+    registered = register_form(scaled)
+
+    difference = np.abs(
+        np.asarray(registered.image, dtype=np.int16) - np.asarray(original, dtype=np.int16)
+    )
+    assert difference.mean() < 8
+
+
+@pytest.mark.parametrize("angle", [90, 180, 270])
+def test_register_form_restores_right_angle_orientation(angle: int) -> None:
+    original = render_sample(SampleKind.CLEAN, seed=2026).image
+    rotated = original.rotate(angle, expand=True)
+
+    registered = register_form(rotated)
+
+    difference = np.abs(
+        np.asarray(registered.image, dtype=np.int16) - np.asarray(original, dtype=np.int16)
+    )
+    assert difference.mean() < 8
 
 
 def test_register_form_rejects_missing_marker_without_partial_result() -> None:

@@ -106,4 +106,3 @@ def test_editing_auto_field_removes_it_from_automation_but_preserves_provenance(
     assert not fields[edited].automated
     assert fields[edited].initial_source is FieldSource.AUTO
     assert fields[edited].final_source is FieldSource.HUMAN
-

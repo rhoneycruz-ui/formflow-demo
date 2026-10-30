@@ -32,6 +32,12 @@ class RegisteredForm:
     marker_centers: tuple[tuple[float, float], ...]
 
 
+@dataclass(frozen=True, slots=True)
+class _MarkerCandidate:
+    center: tuple[float, float]
+    anchor_score: float
+
+
 def validate_upload(data: bytes, filename: str) -> Image.Image:
     """Decode one bounded JPEG/PNG from content, normalize EXIF and return RGB pixels."""
     del filename  # File names are untrusted metadata; content is authoritative.
@@ -49,10 +55,10 @@ def validate_upload(data: bytes, filename: str) -> Image.Image:
             if getattr(source, "n_frames", 1) != 1:
                 raise InvalidUploadError("Upload must be a single-frame image.")
 
-            normalized = ImageOps.exif_transpose(source)
-            width, height = normalized.size
+            width, height = source.size
             if width <= 0 or height <= 0 or width * height > MAX_IMAGE_PIXELS:
                 raise InvalidUploadError("Image must contain at most 20 megapixels.")
+            normalized = ImageOps.exif_transpose(source)
             normalized.load()
             return normalized.convert("RGB")
     except InvalidUploadError:
@@ -63,42 +69,64 @@ def validate_upload(data: bytes, filename: str) -> Image.Image:
         raise InvalidUploadError("Image bytes are invalid or incomplete.") from exc
 
 
-def _marker_candidates(image: Image.Image) -> list[tuple[float, float]]:
+def _marker_candidates(image: Image.Image) -> list[_MarkerCandidate]:
     rgb = np.asarray(image.convert("RGB"))
     gray = cv2.cvtColor(rgb, cv2.COLOR_RGB2GRAY)
     dark = cv2.inRange(gray, 0, 105)
     contours, _ = cv2.findContours(dark, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
-    candidates: list[tuple[float, float]] = []
+    minimum_side = min(image.size) * 0.025
+    maximum_side = min(image.size) * 0.09
+    candidates: list[_MarkerCandidate] = []
     for contour in contours:
         x, y, width, height = cv2.boundingRect(contour)
-        if not (35 <= width <= 95 and 35 <= height <= 95):
+        if not (minimum_side <= width <= maximum_side and minimum_side <= height <= maximum_side):
             continue
         if not 0.72 <= width / height <= 1.28:
             continue
-        if cv2.contourArea(contour) < 1_250:
+        if cv2.contourArea(contour) < width * height * 0.58:
             continue
-        candidates.append((x + width / 2.0, y + height / 2.0))
+        center_region = gray[
+            y + round(height * 0.27) : y + round(height * 0.73),
+            x + round(width * 0.27) : x + round(width * 0.73),
+        ]
+        anchor_score = float(np.count_nonzero(center_region < 105) / center_region.size)
+        candidates.append(
+            _MarkerCandidate((x + width / 2.0, y + height / 2.0), anchor_score)
+        )
     return candidates
 
 
 def _ordered_markers(image: Image.Image) -> tuple[tuple[float, float], ...]:
     width, height = image.size
-    buckets: list[list[tuple[float, float]]] = [[], [], [], []]
-    for center in _marker_candidates(image):
-        x, y = center
+    buckets: list[list[_MarkerCandidate]] = [[], [], [], []]
+    for candidate in _marker_candidates(image):
+        x, y = candidate.center
         if x < width * 0.25 and y < height * 0.25:
-            buckets[0].append(center)
+            buckets[0].append(candidate)
         elif x > width * 0.75 and y < height * 0.25:
-            buckets[1].append(center)
+            buckets[1].append(candidate)
         elif x < width * 0.25 and y > height * 0.75:
-            buckets[2].append(center)
+            buckets[2].append(candidate)
         elif x > width * 0.75 and y > height * 0.75:
-            buckets[3].append(center)
+            buckets[3].append(candidate)
 
     if any(len(bucket) != 1 for bucket in buckets):
         raise IncompatibleFormError("Expected four unique FormFlow registration markers.")
-    return tuple(bucket[0] for bucket in buckets)
+    physical = [bucket[0] for bucket in buckets]
+    ranked = sorted(enumerate(physical), key=lambda item: item[1].anchor_score, reverse=True)
+    if ranked[0][1].anchor_score < 0.65 or (
+        ranked[0][1].anchor_score - ranked[1][1].anchor_score < 0.20
+    ):
+        raise IncompatibleFormError("FormFlow orientation marker is missing or ambiguous.")
+
+    canonical_source_order = {
+        0: (0, 1, 2, 3),  # upright
+        1: (1, 3, 0, 2),  # 90 degrees clockwise
+        2: (2, 0, 3, 1),  # 90 degrees counter-clockwise
+        3: (3, 2, 1, 0),  # 180 degrees
+    }[ranked[0][0]]
+    return tuple(physical[index].center for index in canonical_source_order)
 
 
 def register_form(image: Image.Image) -> RegisteredForm:

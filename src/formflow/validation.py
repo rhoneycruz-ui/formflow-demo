@@ -80,6 +80,33 @@ class ValidatedDocument:
     finalized_at: datetime
 
     def __post_init__(self) -> None:
+        expected = set(FIELD_LAYOUT)
+        keys = [field.key for field in self.fields]
+        if len(keys) != len(expected) or set(keys) != expected:
+            raise ValueError("ValidatedDocument must contain exactly 16 unique expected fields.")
+        by_key = {field.key: field for field in self.fields}
+        for key, field in by_key.items():
+            if field.value is None:
+                continue
+            if key.field_name is FieldName.QUANTITY:
+                valid = (
+                    not isinstance(field.value, bool)
+                    and isinstance(field.value, int)
+                    and 0 <= field.value <= 999
+                )
+            else:
+                valid = isinstance(field.value, Decimal) and (
+                    Decimal("0.00") <= field.value <= Decimal("9999.99")
+                )
+            if not valid:
+                raise ValueError(f"ValidatedDocument contains invalid value for {key}.")
+        for product in PRODUCTS:
+            quantity = by_key[FieldKey(product.product_id, FieldName.QUANTITY)].value
+            price = by_key[FieldKey(product.product_id, FieldName.UNIT_PRICE)].value
+            if (quantity is None) != (price is None):
+                raise ValueError("ValidatedDocument contains an incomplete item pair.")
+        if any(duration < 0 for duration in self.timings_ms.values()):
+            raise ValueError("ValidatedDocument timings must be non-negative.")
         object.__setattr__(self, "timings_ms", MappingProxyType(dict(self.timings_ms)))
 
 

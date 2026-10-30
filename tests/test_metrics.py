@@ -36,4 +36,3 @@ def test_metrics_refuse_mutable_review_sessions() -> None:
 
     with pytest.raises(TypeError, match="ValidatedDocument"):
         calculate_summary(session)  # type: ignore[arg-type]
-

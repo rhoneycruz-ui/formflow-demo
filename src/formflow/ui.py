@@ -47,7 +47,7 @@ def inject_design_system() -> None:
           font-size: .78rem; font-weight: 700; }
         .ff-badge:before { content: ''; width: 7px; height: 7px; border-radius: 50%;
           background: var(--proof); }
-        .ff-rail { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;
+        .ff-rail { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px;
           margin: 8px 0 30px; }
         .ff-step { padding: 10px 12px; border-top: 3px solid rgba(20,43,53,.13);
           color: #75878d; font-size: .76rem; font-weight: 650; }
@@ -98,8 +98,13 @@ def render_header() -> None:
 
 
 def render_progress(active: str) -> None:
-    steps = (("select", "01 · Escolher"), ("process", "02 · Processar"),
-             ("review", "03 · Revisar"), ("result", "04 · Exportar"))
+    steps = (
+        ("select", "01 · Escolher"),
+        ("process", "02 · Processar"),
+        ("review", "03 · Revisar"),
+        ("validate", "04 · Validar"),
+        ("result", "05 · Exportar"),
+    )
     order = [name for name, _ in steps]
     active_index = order.index(active)
     items = []
@@ -208,3 +213,26 @@ def render_full_form_review(session: ReviewSession, image: Image.Image) -> None:
             st.error(error)
         if changed:
             st.rerun()
+
+        pending_fields = [
+            (key, field)
+            for key, field in session.fields.items()
+            if field.status is FieldStatus.PENDING
+        ]
+        if pending_fields:
+            st.markdown("#### O campo está realmente vazio?")
+            st.caption("Confirme somente quando a folha não contiver valor nesse campo.")
+            product_names = {product.product_id: product.name for product in PRODUCTS}
+            field_labels = {
+                FieldName.QUANTITY: "Quantidade",
+                FieldName.UNIT_PRICE: "Preço unitário",
+            }
+            for key, _field in pending_fields:
+                label = (
+                    f"Confirmar vazio · {product_names[key.product_id]} · "
+                    f"{field_labels[key.field_name]}"
+                )
+                button_key = f"blank_{key.product_id}_{key.field_name}_{session.revision}"
+                if st.button(label, key=button_key):
+                    session.confirm(key, datetime.now(UTC))
+                    st.rerun()

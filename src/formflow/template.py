@@ -71,18 +71,22 @@ def _font(size: int, *, bold: bool = False) -> ImageFont.FreeTypeFont | ImageFon
         return ImageFont.load_default(size=size)
 
 
-def _draw_marker(draw: ImageDraw.ImageDraw, box: BoundingBox) -> None:
+def _draw_marker(draw: ImageDraw.ImageDraw, box: BoundingBox, *, anchor: bool) -> None:
     draw.rectangle((box.x, box.y, box.right, box.bottom), fill="#102a43")
     draw.rectangle((box.x + 11, box.y + 11, box.right - 11, box.bottom - 11), fill="white")
-    draw.rectangle((box.x + 20, box.y + 20, box.right - 20, box.bottom - 20), fill="#102a43")
+    inset = 14 if anchor else 20
+    draw.rectangle(
+        (box.x + inset, box.y + inset, box.right - inset, box.bottom - inset),
+        fill="#102a43",
+    )
 
 
 def render_blank_form() -> Image.Image:
     image = Image.new("RGB", FORM_SIZE, "#f8fafc")
     draw = ImageDraw.Draw(image)
 
-    for marker in REGISTRATION_MARKERS.values():
-        _draw_marker(draw, marker)
+    for name, marker in REGISTRATION_MARKERS.items():
+        _draw_marker(draw, marker, anchor=name == "top_left")
 
     draw.rounded_rectangle((145, 65, 1095, 210), radius=24, fill="#0f4c5c")
     draw.text((190, 92), "FORMFLOW", font=_font(44, bold=True), fill="white")

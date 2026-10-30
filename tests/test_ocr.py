@@ -88,4 +88,3 @@ def test_uncertain_nonempty_crop_becomes_pending(crop, reading) -> None:
     assert observation.value is None
     assert observation.status is FieldStatus.PENDING
     assert observation.source is FieldSource.UNRESOLVED
-
