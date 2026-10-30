@@ -1,0 +1,70 @@
+{
+  "clean": {
+    "seed": 101,
+    "fields": {
+      "P01.quantity": "25",
+      "P01.unit_price": "84,97",
+      "P02.quantity": "56",
+      "P02.unit_price": "33,14",
+      "P03.quantity": "11",
+      "P03.unit_price": "70,89",
+      "P04.quantity": "32",
+      "P04.unit_price": "53,72",
+      "P05.quantity": "49",
+      "P05.unit_price": "27,36",
+      "P06.quantity": "29",
+      "P06.unit_price": "83,13",
+      "P07.quantity": "62",
+      "P07.unit_price": "78,39",
+      "P08.quantity": "11",
+      "P08.unit_price": "33,56"
+    },
+    "ambiguous": []
+  },
+  "noisy": {
+    "seed": 202,
+    "fields": {
+      "P01.quantity": "15",
+      "P01.unit_price": "31,97",
+      "P02.quantity": "34",
+      "P02.unit_price": "40,62",
+      "P03.quantity": "21",
+      "P03.unit_price": "73,64",
+      "P04.quantity": "19",
+      "P04.unit_price": "62,25",
+      "P05.quantity": "10",
+      "P05.unit_price": "27,90",
+      "P06.quantity": "26",
+      "P06.unit_price": "40,30",
+      "P07.quantity": "24",
+      "P07.unit_price": "51,25",
+      "P08.quantity": "36",
+      "P08.unit_price": "75,50"
+    },
+    "ambiguous": []
+  },
+  "review": {
+    "seed": 303,
+    "fields": {
+      "P01.quantity": "33",
+      "P01.unit_price": "20,27",
+      "P02.quantity": "69",
+      "P02.unit_price": "38,23",
+      "P03.quantity": "38",
+      "P03.unit_price": "72,92",
+      "P04.quantity": "22",
+      "P04.unit_price": "25,55",
+      "P05.quantity": "62",
+      "P05.unit_price": "73,64",
+      "P06.quantity": "79",
+      "P06.unit_price": "10,80",
+      "P07.quantity": "52",
+      "P07.unit_price": "39,97",
+      "P08.quantity": "71",
+      "P08.unit_price": "75,68"
+    },
+    "ambiguous": [
+      "P04.quantity"
+    ]
+  }
+}
